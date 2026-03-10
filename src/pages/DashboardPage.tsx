@@ -2,6 +2,7 @@ import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import Dashboard from "../components/Dashboard";
+import AttendanceSummary from "../components/AttendanceSummary";
 
 const TABS = [
   { id: "dashboard", label: "Beranda" },
@@ -32,6 +33,7 @@ export default function DashboardPage() {
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6">
           {activeTab === "dashboard" && <Dashboard />}
+          {activeTab === "summary" && <AttendanceSummary />}
         </div>
       </main>
     </div>
