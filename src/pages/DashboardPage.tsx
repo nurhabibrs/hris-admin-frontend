@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import Dashboard from "../components/Dashboard";
 import AttendanceSummary from "../components/AttendanceSummary";
 import EmployeeManagement from "../components/EmployeeManagement";
+import { socket } from "../services/socket";
+import { toast } from "react-toastify";
 
 const TABS = [
   { id: "dashboard", label: "Beranda" },
@@ -16,6 +18,12 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
+
+  useEffect(() => {
+    socket.on("admin-notification", (data): void => {
+      toast.warn(data.message);
+    })
+  }, [])
 
   return (
     <div className="min-h-screen bg-slate-50">
