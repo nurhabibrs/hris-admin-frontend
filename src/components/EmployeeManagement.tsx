@@ -154,10 +154,6 @@ export default function EmployeeManagement() {
 
     const handleSave = async () => {
         if (!selectedEmployee?.id) return;
-        if (positionId === null) {
-            setSaveError("Posisi wajib dipilih.");
-            return;
-        }
         setSaving(true);
         setSaveError(null);
         try {
