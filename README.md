@@ -79,11 +79,17 @@ Create a `.env` file in the project root:
 
 ```env
 VITE_API_URL=http://localhost:3000
+VITE_APP_NAME=HRIS Admin Company Manager
+VITE_PORT=4000
 ```
 
-`VITE_API_URL` is the base URL of the HRIS backend API. All requests made through the Axios instance will use this as their base.
+| Variable | Description | Default |
+|---|---|---|
+| `VITE_API_URL` | Base URL of the HRIS backend API | `http://localhost:8000` |
+| `VITE_APP_NAME` | Application display name | `HRIS Admin Company Manager` |
+| `VITE_PORT` | Port the app is exposed on (Docker) | `4000` |
 
-### Running the App
+### Running the App (Local)
 
 ```bash
 # Start development server
@@ -98,6 +104,66 @@ npm run preview
 # Lint
 npm run lint
 ```
+
+---
+
+## Docker
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) >= 24
+- [Docker Compose](https://docs.docker.com/compose/) v2
+
+### Build & Run with Docker Compose
+
+```bash
+# Start the container (builds image on first run)
+docker compose up --build -d
+```
+
+The app will be available at **http://localhost:4000** (or whichever port is set in `VITE_PORT`).
+
+### Passing Environment Variables
+
+You can override any build argument via a `.env` file at the project root or by passing variables inline:
+
+```bash
+VITE_API_URL=https://api.example.com VITE_PORT=8080 docker compose up --build -d
+```
+
+Or set them in your `.env` file and Docker Compose will pick them up automatically:
+
+```env
+VITE_API_URL=https://api.example.com
+VITE_APP_NAME=HRIS Admin
+VITE_PORT=8080
+```
+
+### Useful Docker Commands
+
+```bash
+# View running containers
+docker compose ps
+
+# View logs
+docker compose logs -f
+
+# Stop the container
+docker compose down
+
+# Rebuild the image without cache
+docker compose build --no-cache
+
+# Remove containers, networks, and volumes
+docker compose down -v
+```
+
+### How It Works
+
+The Docker setup uses a **multi-stage build**:
+
+1. **Stage 1 — Builder** (`node:22-alpine`): Installs dependencies and runs `npm run build`, injecting environment variables as Vite build args so they are baked into the static output.
+2. **Stage 2 — Runner** (`nginx:1.27-alpine`): Serves the compiled static files from `/usr/share/nginx/html` using a custom Nginx configuration.
 
 ## Authentication Flow
 
