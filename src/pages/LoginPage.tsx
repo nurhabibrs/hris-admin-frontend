@@ -36,7 +36,7 @@ export default function LoginPage() {
             {snackbar && <Snackbar message={snackbar.message} type={snackbar.type} onClose={closeSnackbar} />}
             <div className="w-full max-w-md">
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-14 h-14 bg-red-200 rounded-xl mb-4">
+                    <div className="inline-flex items-center justify-center w-14 h-14 bg-sky-200 rounded-xl mb-4">
                         <img src={ReactLogo} alt="HRIS Logo" className="w-8 h-8" />
                     </div>
                     <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome to {import.meta.env.VITE_APP_NAME}!</h1>
