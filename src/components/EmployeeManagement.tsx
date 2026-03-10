@@ -4,10 +4,10 @@ import type { User } from "../interface/UserInterface";
 import type { Position } from "../interface/PositionInterface";
 import api from "../api/axios";
 
-type ModalMode = "view" | "edit" | null;
+type ModalMode = "view" | "edit" | "create" | null;
 
 export default function EmployeeManagement() {
-    const { employees, meta, fetchEmployees, updateEmployee } = useEmployeeStore();
+    const { employees, meta, fetchEmployees, createEmployee, updateEmployee } = useEmployeeStore();
     const [order, setOrder] = useState<"asc" | "desc">("desc");
     const [limit, setLimit] = useState(10);
     const [page, setPage] = useState(1);
@@ -25,7 +25,16 @@ export default function EmployeeManagement() {
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const photoPreviewUrlRef = useRef<string | null>(null);
     const [positions, setPositions] = useState<Position[]>([]);
-    const [positionId, setPositionId] = useState<number | null>(null);;
+    const [positionId, setPositionId] = useState<number | null>(null);
+
+    const [createForm, setCreateForm] = useState<{ name: string; email: string; phone_number: string; password: string; role: string }>({ name: "", email: "", phone_number: "", password: "", role: "employee" });
+    const [createPositionId, setCreatePositionId] = useState<number | null>(null);
+    const [createPhotoFile, setCreatePhotoFile] = useState<File | null>(null);
+    const [createPhotoPreview, setCreatePhotoPreview] = useState<string | null>(null);
+    const createPhotoPreviewUrlRef = useRef<string | null>(null);
+    const [createPositions, setCreatePositions] = useState<Position[]>([]);
+    const [createSaving, setCreateSaving] = useState(false);
+    const [createError, setCreateError] = useState<string | null>(null);
 
     const handleNameChange = (value: string) => {
         setName(value);
@@ -52,6 +61,56 @@ export default function EmployeeManagement() {
         setName("");
         setDebouncedName("");
         setRole("");
+    };
+
+    const openCreate = () => {
+        setCreateForm({ name: "", email: "", phone_number: "", password: "", role: "employee" });
+        setCreatePositionId(null);
+        setCreatePhotoFile(null);
+        setCreatePhotoPreview(null);
+        setCreateError(null);
+        api.get<Position[]>("/positions").then((res) => {
+            const data = Array.isArray(res.data) ? res.data : (res.data as { data?: Position[] })?.data ?? [];
+            setCreatePositions(data);
+        }).catch(() => setCreatePositions([]));
+        setModalMode("create");
+    };
+
+    const closeCreateModal = () => {
+        setModalMode(null);
+        setCreateError(null);
+        setCreatePhotoFile(null);
+        if (createPhotoPreviewUrlRef.current) {
+            URL.revokeObjectURL(createPhotoPreviewUrlRef.current);
+            createPhotoPreviewUrlRef.current = null;
+        }
+        setCreatePhotoPreview(null);
+    };
+
+    const handleCreate = async () => {
+        if (!createForm.name.trim()) { setCreateError("Nama wajib diisi."); return; }
+        if (!createForm.email.trim()) { setCreateError("Email wajib diisi."); return; }
+        if (!createForm.password.trim()) { setCreateError("Password wajib diisi."); return; }
+        if (createPositionId === null) { setCreateError("Posisi wajib dipilih."); return; }
+        setCreateSaving(true);
+        setCreateError(null);
+        try {
+            if (createPhotoFile) {
+                const formData = new FormData();
+                Object.entries(createForm).forEach(([key, value]) => { if (value !== undefined && value !== null) formData.append(key, value as string); });
+                formData.append("position_id", String(createPositionId));
+                formData.append("profile_photo", createPhotoFile);
+                await createEmployee(formData);
+            } else {
+                await createEmployee({ ...createForm, position_id: createPositionId });
+            }
+            closeCreateModal();
+            fetchEmployees({ page, limit, order, ...(debouncedName ? { name: debouncedName } : {}), ...(role ? { role } : {}) });
+        } catch {
+            setCreateError("Gagal membuat karyawan. Coba lagi.");
+        } finally {
+            setCreateSaving(false);
+        }
     };
 
     const openView = (employee: User) => {
@@ -128,7 +187,15 @@ export default function EmployeeManagement() {
     return (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="px-4 sm:px-6 py-4 border-b border-slate-100">
-                <h3 className="text-lg font-semibold text-slate-800 mb-3">Daftar Karyawan</h3>
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-slate-800">Daftar Karyawan</h3>
+                    <button
+                        onClick={openCreate}
+                        className="text-sm px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    >
+                        + Tambah Karyawan
+                    </button>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-2">
                     <input
                         type="text"
@@ -274,6 +341,136 @@ export default function EmployeeManagement() {
                         </button>
                     </div>
                 </div>
+            )}
+
+            {/* Create Modal */}
+            {modalMode === "create" && (
+                <form onSubmit={(e) => { e.preventDefault(); handleCreate(); }}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                            <h3 className="text-base font-semibold text-slate-800">Tambah Karyawan</h3>
+                            <button type="button" onClick={closeCreateModal} className="text-slate-400 hover:text-slate-600 transition-colors text-xl leading-none">&times;</button>
+                        </div>
+                        <div className="px-6 py-5 space-y-4 text-sm">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-slate-500">Photo</label>
+                                <div className="flex items-center gap-3">
+                                    <div className="h-16 w-16 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0">
+                                        {createPhotoPreview ? (
+                                            <img src={createPhotoPreview} alt="Preview" className="h-full w-full object-cover" />
+                                        ) : (
+                                            <span className="text-slate-400 text-xs text-center px-1">No photo</span>
+                                        )}
+                                    </div>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0] ?? null;
+                                            setCreatePhotoFile(file);
+                                            if (createPhotoPreviewUrlRef.current) {
+                                                URL.revokeObjectURL(createPhotoPreviewUrlRef.current);
+                                                createPhotoPreviewUrlRef.current = null;
+                                            }
+                                            if (file) {
+                                                const url = URL.createObjectURL(file);
+                                                createPhotoPreviewUrlRef.current = url;
+                                                setCreatePhotoPreview(url);
+                                            } else {
+                                                setCreatePhotoPreview(null);
+                                            }
+                                        }}
+                                        className="text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-slate-200 file:text-xs file:font-medium file:text-slate-600 file:bg-white hover:file:bg-slate-50 file:cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-slate-500">Nama <span className="text-red-500">*</span></label>
+                                <input
+                                    type="text"
+                                    value={createForm.name}
+                                    onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+                                    className="border border-slate-200 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Masukkan nama lengkap"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-slate-500">Email <span className="text-red-500">*</span></label>
+                                <input
+                                    type="email"
+                                    value={createForm.email}
+                                    onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+                                    className="border border-slate-200 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="contoh@email.com"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-slate-500">Password <span className="text-red-500">*</span></label>
+                                <input
+                                    type="password"
+                                    value={createForm.password}
+                                    onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
+                                    className="border border-slate-200 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Masukkan password"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-slate-500">No. Telepon</label>
+                                <input
+                                    type="text"
+                                    value={createForm.phone_number}
+                                    onChange={(e) => setCreateForm((f) => ({ ...f, phone_number: e.target.value }))}
+                                    className="border border-slate-200 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Masukkan nomor telepon"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-slate-500">Role</label>
+                                <select
+                                    value={createForm.role}
+                                    onChange={(e) => setCreateForm((f) => ({ ...f, role: e.target.value }))}
+                                    className="border border-slate-200 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="employee">Employee</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-slate-500">Posisi <span className="text-red-500">*</span></label>
+                                <select
+                                    value={createPositionId ?? ""}
+                                    onChange={(e) => setCreatePositionId(e.target.value === "" ? null : Number(e.target.value))}
+                                    className="border border-slate-200 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="">-- Pilih Posisi --</option>
+                                    {createPositions.map((pos) => (
+                                        <option key={pos.id} value={pos.id}>{pos.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            {createError && <p className="text-red-500 text-xs">{createError}</p>}
+                        </div>
+                        <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={closeCreateModal}
+                                disabled={createSaving}
+                                className="text-sm px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-40"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={createSaving}
+                                className="text-sm px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-40"
+                            >
+                                {createSaving ? "Menyimpan..." : "Simpan"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                </form>
             )}
 
             {/* View Modal */}

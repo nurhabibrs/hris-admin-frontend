@@ -20,6 +20,7 @@ interface EmployeeListState {
         name?: string
         role?: string
     }) => Promise<void>
+    createEmployee: (data: Partial<User> & { password?: string; position_id?: number } | FormData) => Promise<void>
     updateEmployee: (userId: string, data: Partial<User> | FormData) => Promise<void>
     resetEmployees: () => void
 }
@@ -56,6 +57,12 @@ export const useEmployeeStore = create<EmployeeListState>((set) => ({
     },
 
     resetEmployees: () => set({ employees: [], meta: null }),
+
+    createEmployee: async (data) => {
+        const res = await api.post("/users", data)
+        const created: User = res.data?.data ?? res.data
+        set((state) => ({ employees: [created, ...state.employees] }))
+    },
 
     updateEmployee: async (userId, data) => {
         const res = await api.patch(`/users/${userId}`, data)
