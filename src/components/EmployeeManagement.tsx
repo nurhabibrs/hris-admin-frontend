@@ -91,7 +91,6 @@ export default function EmployeeManagement() {
         if (!createForm.name.trim()) { setCreateError("Nama wajib diisi."); return; }
         if (!createForm.email.trim()) { setCreateError("Email wajib diisi."); return; }
         if (!createForm.password.trim()) { setCreateError("Password wajib diisi."); return; }
-        if (createPositionId === null) { setCreateError("Posisi wajib dipilih."); return; }
         setCreateSaving(true);
         setCreateError(null);
         try {
@@ -102,7 +101,7 @@ export default function EmployeeManagement() {
                 formData.append("profile_photo", createPhotoFile);
                 await createEmployee(formData);
             } else {
-                await createEmployee({ ...createForm, position_id: createPositionId });
+                await createEmployee(createForm);
             }
             closeCreateModal();
             fetchEmployees({ page, limit, order, ...(debouncedName ? { name: debouncedName } : {}), ...(role ? { role } : {}) });
@@ -437,7 +436,7 @@ export default function EmployeeManagement() {
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1">
-                                <label className="text-slate-500">Posisi <span className="text-red-500">*</span></label>
+                                <label className="text-slate-500">Posisi</label>
                                 <select
                                     value={createPositionId ?? ""}
                                     onChange={(e) => setCreatePositionId(e.target.value === "" ? null : Number(e.target.value))}
