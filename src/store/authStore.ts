@@ -25,11 +25,25 @@ function decodeToken(token: string): User | null {
     }
 }
 
+function isTokenExpired(token: string): boolean {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        return payload.exp * 1000 < Date.now()
+    } catch {
+        return true
+    }
+}
+
 const storedToken = localStorage.getItem("access_token")
+if (storedToken && isTokenExpired(storedToken)) {
+    localStorage.removeItem("access_token")
+}
+
+const validToken = storedToken && !isTokenExpired(storedToken) ? storedToken : null
 
 export const useAuthStore = create<AuthState>((set) => ({
-    user: storedToken ? decodeToken(storedToken) : null,
-    token: storedToken,
+    user: validToken ? decodeToken(validToken) : null,
+    token: validToken,
 
     login: async (email, password) => {
         const res = await api.post("/auth/login", {
