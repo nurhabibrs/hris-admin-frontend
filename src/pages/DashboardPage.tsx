@@ -5,7 +5,7 @@ import Dashboard from "../components/Dashboard";
 
 const TABS = [
   { id: "dashboard", label: "Beranda" },
-  { id: "employees", label: "Karyawan" },
+  { id: "employee", label: "Karyawan" },
   { id: "summary", label: "Rekap Presensi" }
 ];
 
