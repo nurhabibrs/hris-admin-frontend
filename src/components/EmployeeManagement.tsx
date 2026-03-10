@@ -25,7 +25,7 @@ export default function EmployeeManagement() {
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const photoPreviewUrlRef = useRef<string | null>(null);
     const [positions, setPositions] = useState<Position[]>([]);
-    const [positionId, setPositionId] = useState<number | "">("");
+    const [positionId, setPositionId] = useState<number | null>(null);;
 
     const handleNameChange = (value: string) => {
         setName(value);
@@ -67,7 +67,7 @@ export default function EmployeeManagement() {
             phone_number: employee.phone_number ?? "",
             role: employee.role ?? "employee",
         });
-        setPositionId(employee.position?.id ?? "");
+        setPositionId(employee.position?.id ?? null);
         setSaveError(null);
         setPhotoFile(null);
         api.get<Position[]>("/positions").then((res) => {
@@ -96,6 +96,10 @@ export default function EmployeeManagement() {
 
     const handleSave = async () => {
         if (!selectedEmployee?.id) return;
+        if (positionId === null) {
+            setSaveError("Posisi wajib dipilih.");
+            return;
+        }
         setSaving(true);
         setSaveError(null);
         try {
@@ -104,11 +108,11 @@ export default function EmployeeManagement() {
                 Object.entries(editForm).forEach(([key, value]) => {
                     if (value !== undefined && value !== null) formData.append(key, value as string);
                 });
-                if (positionId !== "") formData.append("position_id", String(positionId));
+                if (positionId !== null) formData.append("position_id", String(positionId));
                 formData.append("profile_photo", photoFile);
                 await updateEmployee(selectedEmployee.id, formData);
             } else {
-                const payload = { ...editForm, ...(positionId !== "" ? { position_id: positionId } : {}) };
+                const payload = { ...editForm, ...(positionId !== null ? { position_id: positionId } : {}) };
                 await updateEmployee(selectedEmployee.id, payload as Partial<User>);
             }
             closeModal();
@@ -327,6 +331,7 @@ export default function EmployeeManagement() {
 
             {/* Edit Modal */}
             {modalMode === "edit" && selectedEmployee && (
+                <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
@@ -409,8 +414,8 @@ export default function EmployeeManagement() {
                             <div className="flex flex-col gap-1">
                                 <label className="text-slate-500">Posisi</label>
                                 <select
-                                    value={positionId}
-                                    onChange={(e) => setPositionId(e.target.value === "" ? "" : Number(e.target.value))}
+                                    value={positionId ?? ""}
+                                    onChange={(e) => setPositionId(e.target.value === "" ? null : Number(e.target.value))}
                                     className="border border-slate-200 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="">-- Pilih Posisi --</option>
@@ -430,7 +435,7 @@ export default function EmployeeManagement() {
                                 Batal
                             </button>
                             <button
-                                onClick={handleSave}
+                                type="submit"
                                 disabled={saving}
                                 className="text-sm px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-40"
                             >
@@ -439,6 +444,7 @@ export default function EmployeeManagement() {
                         </div>
                     </div>
                 </div>
+                </form>
             )}
         </div>
     );
