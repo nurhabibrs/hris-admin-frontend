@@ -97,7 +97,7 @@ export default function EmployeeManagement() {
             if (createPhotoFile) {
                 const formData = new FormData();
                 Object.entries(createForm).forEach(([key, value]) => { if (value !== undefined && value !== null) formData.append(key, value as string); });
-                formData.append("position_id", String(createPositionId));
+                if (createPositionId !== null) formData.append("position_id", String(createPositionId));
                 formData.append("profile_photo", createPhotoFile);
                 await createEmployee(formData);
             } else {
